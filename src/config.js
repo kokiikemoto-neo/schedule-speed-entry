@@ -1,10 +1,11 @@
-// 認証情報は localStorage が優先。空ならハードコード値(あなた専用) を fallback。
-// 他の人が使う場合は画面の「⚙ 設定」から自分の Client ID / API Key を保存してください。
+// 認証情報は localStorage に保存。各ユーザはアプリの「⚙ 各種設定」で
+// 自分の Client ID / API Key を入力してください。
+// このリポジトリは公開可能。ハードコードのデフォルト値は持ちません。
 const STORAGE_CLIENT_ID = "cfg_client_id";
 const STORAGE_API_KEY = "cfg_api_key";
 
-const DEFAULT_CLIENT_ID = "25632244416-hk0gft5reu91gi6juth32m0acn6tfsva.apps.googleusercontent.com";
-const DEFAULT_API_KEY = "AIzaSyCMTIny2Li9n_auoI1D77EA0ls32yM60uU";
+const DEFAULT_CLIENT_ID = "";
+const DEFAULT_API_KEY = "";
 
 function load(key, fallback) {
   try {

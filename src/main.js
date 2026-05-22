@@ -146,10 +146,10 @@ async function main() {
   const authedSection = document.getElementById("authed-section");
   const landingSection = document.getElementById("landing-section");
 
-  if (CLIENT_ID.startsWith("YOUR_") || API_KEY.startsWith("YOUR_")) {
+  if (!CLIENT_ID || !API_KEY || CLIENT_ID.startsWith("YOUR_") || API_KEY.startsWith("YOUR_")) {
     signInBtn.disabled = true;
     signInBtn.textContent = "config 未設定";
-    setBanner("error", "❌ 認証情報が未設定です。「⚙ 各種設定」から登録してください");
+    setBanner("error", "❌ 認証情報が未設定です。「⚙ 各種設定」→「🔑 Google 認証情報」から登録してください");
     return;
   }
 
