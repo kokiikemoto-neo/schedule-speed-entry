@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>Sales Follower — 営業フォローを Google ツールで半自動化</title>
+  <meta name="description" content="Sales Follower は、再架電予定と資料送付メールを Google カレンダー / Gmail / Tasks に同時登録するブラウザツール。ログインだけで使え、データはあなたのアカウントだけに保存されます。" />
+  <meta name="theme-color" content="#4a6cf7" />
+
+  <!-- OGP -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Sales Follower" />
+  <meta property="og:description" content="営業フォローアップを Google ツール (Calendar / Gmail / Tasks) と連携して半自動化するブラウザツール" />
+  <meta property="og:site_name" content="Sales Follower" />
+  <meta property="og:locale" content="ja_JP" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Sales Follower" />
+  <meta name="twitter:description" content="営業フォローを Google ツールで半自動化" />
+
+  <!-- Inline SVG favicon (S = Sales Follower) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234a6cf7'/%3E%3Ctext x='50' y='70' font-size='62' text-anchor='middle' fill='white' font-family='-apple-system,Segoe UI,sans-serif' font-weight='700'%3ES%3C/text%3E%3C/svg%3E" />
+
+  <link rel="stylesheet" href="src/style.css?v=20260520d" />
+  <script src="https://apis.google.com/js/api.js" defer></script>
+  <script src="https://accounts.google.com/gsi/client" defer></script>
+  <script type="module" src="src/main.js?v=20260520d"></script>
+</head>
+<body>
+  <header>
+    <h1>Sales Follower <span class="brand-tag">β</span></h1>
+    <button id="open-settings-btn" title="各種設定">⚙ 各種設定</button>
+    <button id="popout-btn" title="常に最前面の小窓に切り出します">📌 浮き出す</button>
+    <button id="signin-btn">Google にログイン</button>
+    <button id="signout-btn" hidden>ログアウト</button>
+  </header>
+
+  <div id="conn-banner" class="conn-banner conn-idle">⚪ 未ログイン</div>
+
+  <!-- ログイン前ランディング -->
+  <section id="landing-section" class="landing">
+    <div class="hero">
+      <h2 class="hero-title">営業フォローアップを、もっと速く。</h2>
+      <p class="hero-sub">
+        Sales Follower は、営業電話やメール送付の予定を Google カレンダー / タスク / Gmail と連携して
+        半自動化する小さなツールです。架電予定もメール下書きも、3クリックで終わります。
+      </p>
+      <ul class="hero-features">
+        <li>📞 <b>再架電予定</b> → Google カレンダーに自動登録</li>
+        <li>📧 <b>メール送付</b> → Google Tasks + Gmail 下書きを一括作成</li>
+        <li>📋 <b>サービスごとに雛形</b> → 商品別のフォローテンプレを管理</li>
+        <li>📌 <b>浮き出し小窓</b> → 常時最前面でながら作業</li>
+        <li>🔒 <b>データはあなたの Google アカウントとブラウザのみ</b> (このアプリのサーバには何も送信されません)</li>
+      </ul>
+      <div class="hero-cta">
+        <button id="cta-signin-btn" class="cta-btn">Google にログインして始める</button>
+        <button id="open-howto-btn" class="cta-secondary" type="button">📖 導入方法を読む</button>
+      </div>
+    </div>
+  </section>
+
+  <main id="authed-section" hidden>
+    <section id="next-event-panel" class="panel">
+      <div class="panel-header">
+        <h2>🗓 直近の予定</h2>
+        <button id="refresh-btn" class="icon-btn" title="更新">⟳</button>
+      </div>
+      <ol id="event-list" class="event-list"></ol>
+      <div class="status" id="next-event-status"></div>
+    </section>
+
+    <section class="panel">
+      <h2>✏ 予定を登録</h2>
+      <form id="quick-add-form">
+        <label>種別
+          <select name="category" required>
+            <option value="再架電">再架電</option>
+            <option value="メール送付">メール送付</option>
+          </select>
+        </label>
+        <label id="active-service-row" hidden>使用サービス
+          <select id="active-service-selector" name="activeService"></select>
+        </label>
+        <label>会社名
+          <input type="text" name="company" placeholder="株式会社○○" required />
+        </label>
+        <label>担当者名
+          <input type="text" name="contact" placeholder="山田 太郎" required />
+        </label>
+        <label id="phone-row">電話番号
+          <input type="tel" name="phone" placeholder="03-1234-5678" />
+        </label>
+        <label id="email-row" hidden>メールアドレス (資料送付先)
+          <input type="email" name="email" placeholder="example@company.co.jp" />
+        </label>
+        <label id="startat-row">開始日時
+          <input type="datetime-local" name="startAt" step="300" />
+        </label>
+        <label id="duration-row">長さ
+          <select name="duration">
+            <option value="5">5分</option>
+            <option value="10" selected>10分</option>
+            <option value="15">15分</option>
+          </select>
+        </label>
+        <div class="preview" id="title-preview">タイトル: 【再架電】　　</div>
+
+        <button type="submit">カレンダーに追加</button>
+        <div class="status" id="quick-add-status"></div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-row">
+      <span class="footer-brand">Sales Follower β</span>
+      <nav class="footer-links">
+        <button type="button" class="link" id="open-howto-link">導入方法</button>
+        <span class="sep">·</span>
+        <button type="button" class="link" id="open-privacy-link">プライバシーポリシー</button>
+        <span class="sep">·</span>
+        <button type="button" class="link" id="open-terms-link">利用規約</button>
+        <span class="sep">·</span>
+        <button type="button" class="link" id="open-contact-link">お問い合わせ</button>
+      </nav>
+    </div>
+    <div class="footer-copy">© 2026 Sales Follower. Built for personal/small team use.</div>
+  </footer>
+
+  <!-- 各種設定モーダル -->
+  <div id="settings-modal" class="modal" hidden>
+    <div id="settings-backdrop" class="modal-backdrop"></div>
+    <div class="modal-body">
+      <div class="modal-header">
+        <h2>⚙ 各種設定</h2>
+        <button id="settings-close-btn" class="icon-btn" title="閉じる">✕</button>
+      </div>
+
+      <details open class="settings-section">
+        <summary>✍ メール署名</summary>
+        <p class="settings-intro">
+          ここに入力した署名が、メール送付時の Gmail 下書きの末尾に自動追加されます。
+        </p>
+        <label>署名
+          <textarea id="sig-body" rows="6" placeholder="--&#10;田中 太郎&#10;株式会社○○&#10;TEL: 03-1234-5678"></textarea>
+        </label>
+        <div class="settings-actions">
+          <button id="sig-save" type="button">保存</button>
+          <button id="sig-clear" type="button" class="secondary">クリア</button>
+        </div>
+        <div class="status" id="sig-status"></div>
+      </details>
+
+      <details class="settings-section">
+        <summary>📋 サービス管理</summary>
+        <p class="settings-intro">
+          複数のサービス(商品)を登録し、それぞれ別のメール雛形を持たせられます。<br>
+          フォームの「使用サービス」で切り替えると、その雛形で Gmail 下書きが作成されます。
+        </p>
+        <div id="services-list"></div>
+        <button id="add-service-btn" type="button" class="primary-btn">+ 新規サービス追加</button>
+
+        <div id="service-editor" hidden class="service-editor">
+          <h3 id="editor-title" class="editor-title">新規サービス</h3>
+          <label>サービス名 (商品名)
+            <input type="text" id="svc-name" placeholder="例: 商品A" />
+          </label>
+          <label>件名雛形
+            <input type="text" id="svc-subject" />
+          </label>
+          <label>本文雛形
+            <textarea id="svc-body" rows="12"></textarea>
+          </label>
+          <p class="settings-intro">
+            使える変数: <code>{会社名}</code> <code>{担当者名}</code> <code>{電話番号}</code>
+            <code>{日付}</code> <code>{時刻}</code> <code>{サービス名}</code>
+          </p>
+          <div class="settings-actions">
+            <button id="svc-save" type="button">保存</button>
+            <button id="svc-cancel" type="button" class="secondary">キャンセル</button>
+          </div>
+          <div class="status" id="svc-status"></div>
+        </div>
+      </details>
+
+      <details class="settings-section">
+        <summary>🔑 Google 認証情報 (上級者向け)</summary>
+        <p class="settings-intro">
+          通常は何も入力する必要はありません (組み込みの共通 Client ID で動作します)。<br>
+          自分の Cloud プロジェクトで動かしたい場合だけ入力してください。
+        </p>
+        <label>Client ID
+          <input type="text" id="cfg-client-id" placeholder="123456-xxxxx.apps.googleusercontent.com" autocomplete="off" />
+        </label>
+        <label>API Key
+          <input type="text" id="cfg-api-key" placeholder="AIzaSyXXXXX..." autocomplete="off" />
+        </label>
+        <div class="settings-actions">
+          <button id="cfg-save" type="button">保存して再読み込み</button>
+          <button id="cfg-reset" type="button" class="secondary">リセット</button>
+        </div>
+        <div class="status" id="cfg-status"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- 導入方法モーダル -->
+  <div id="howto-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close="howto"></div>
+    <div class="modal-body modal-doc">
+      <div class="modal-header">
+        <h2>📖 導入方法</h2>
+        <button class="icon-btn" data-close="howto" title="閉じる">✕</button>
+      </div>
+
+      <h3>1. 普通に使うだけなら</h3>
+      <ol>
+        <li>ヘッダの「<b>Google にログイン</b>」をクリック</li>
+        <li>同意画面で <b>カレンダー / Gmail / タスク</b> へのアクセスを許可</li>
+        <li>「⚙ 各種設定」→「📋 サービス管理」で雛形を登録</li>
+        <li>フォームから架電 / メール送付を登録 → カレンダー・Tasks・Gmail に反映</li>
+      </ol>
+
+      <h3>2. 自分の Google Cloud プロジェクトで動かす (任意)</h3>
+      <p>
+        組織のセキュリティポリシーなどで「自分のプロジェクトでしか OAuth を通したくない」場合、
+        以下の手順で各自の Client ID / API キーを使えます。
+      </p>
+      <ol>
+        <li><a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud Console</a> でプロジェクト作成</li>
+        <li>「APIとサービス」→「ライブラリ」で以下の API を <b>すべて有効化</b>:
+          <ul>
+            <li>Google Calendar API</li>
+            <li>Gmail API</li>
+            <li>Google Tasks API</li>
+          </ul>
+        </li>
+        <li>「OAuth 同意画面」を構成:
+          <ul>
+            <li>User Type: 外部 (テスト)</li>
+            <li>スコープに <code>calendar.events</code> / <code>gmail.compose</code> / <code>tasks</code> を追加</li>
+            <li>テストユーザに自分の Gmail アドレスを追加</li>
+          </ul>
+        </li>
+        <li>「認証情報」→ <b>OAuth クライアント ID</b> 作成 (種類: ウェブアプリケーション)
+          <ul><li>承認済み JavaScript 生成元: 利用中のアプリ URL (例: <code>http://localhost:5173</code>)</li></ul>
+        </li>
+        <li>同画面で <b>API キー</b> を発行</li>
+        <li>このアプリの「⚙ 各種設定」→「🔑 Google 認証情報」に Client ID と API キーを貼り付け → 保存</li>
+        <li>再ログインして同意画面で全権限にチェック</li>
+      </ol>
+
+      <h3>3. 自分のサーバ / ホスティングにデプロイする場合</h3>
+      <ol>
+        <li>このプロジェクト一式 (HTML/JS/CSS) を任意の静的ホスティング (Vercel, Netlify, GitHub Pages 等) にアップロード</li>
+        <li>Google Cloud Console の OAuth クライアントで <b>承認済み JavaScript 生成元</b> にデプロイ先 URL を追加</li>
+        <li>HTTPS が必須 (Google API が HTTP では拒否)</li>
+        <li>正式公開する場合は OAuth 同意画面の <b>公開</b> ボタン + ブランド検証手続き(数日)が必要</li>
+      </ol>
+
+      <h3>4. 使えるスコープと必要な権限</h3>
+      <table class="perm-table">
+        <thead><tr><th>スコープ</th><th>用途</th><th>影響範囲</th></tr></thead>
+        <tbody>
+          <tr><td><code>calendar.events</code></td><td>再架電予定の作成・読み込み</td><td>カレンダー予定のみ。設定は変更不可</td></tr>
+          <tr><td><code>gmail.compose</code></td><td>メール下書きの作成</td><td>下書きのみ作成。送信は行いません</td></tr>
+          <tr><td><code>tasks</code></td><td>資料送付タスクの作成・完了マーク</td><td>Google Tasks のみ</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5. うまくいかないとき</h3>
+      <ul>
+        <li><b>「access_blocked / app not verified」</b>: OAuth 同意画面の「テストユーザ」に自分のメールを追加</li>
+        <li><b>「Calendar API not enabled」</b>: Cloud Console で該当 API を有効化</li>
+        <li><b>401 が出続ける</b>: 一度ログアウト → 再ログイン</li>
+        <li><b>下書きができない</b>: 同意画面で「下書き作成」のチェックが ON か確認</li>
+      </ul>
+      <div class="contact-cta">
+        <p class="contact-cta-text">上記で解決しない場合はお気軽にどうぞ</p>
+        <button type="button" class="cta-btn" id="open-contact-from-howto">
+          📮 お問い合わせ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- お問い合わせモーダル -->
+  <div id="contact-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close="contact"></div>
+    <div class="modal-body modal-doc">
+      <div class="modal-header">
+        <h2>📮 お問い合わせ</h2>
+        <button class="icon-btn" data-close="contact" title="閉じる">✕</button>
+      </div>
+
+      <p class="settings-intro">
+        ご質問・不具合報告・機能要望など、お気軽にお寄せください。<br>
+        下のフォームを使うと、お使いのメールクライアントで宛先・本文が入力された下書きが開きます。
+      </p>
+
+      <div class="contact-info">
+        <span class="contact-info-label">送信先</span>
+        <code class="contact-info-value">koki.ikemoto@neo-career.co.jp</code>
+      </div>
+
+      <form id="contact-form" class="contact-form" onsubmit="return false">
+        <label>カテゴリ
+          <select id="contact-category">
+            <option value="質問">❓ 質問</option>
+            <option value="不具合報告">🐛 不具合報告</option>
+            <option value="機能要望">💡 機能要望</option>
+            <option value="その他">📝 その他</option>
+          </select>
+        </label>
+        <label>お名前 (任意)
+          <input type="text" id="contact-name" placeholder="山田 太郎" autocomplete="name" />
+        </label>
+        <label>件名
+          <input type="text" id="contact-subject" placeholder="例: ログインができません" required />
+        </label>
+        <label>内容
+          <textarea id="contact-body" rows="8" placeholder="状況を詳しく教えてください。エラーメッセージや再現手順があれば貼り付けると早く解決できます。" required></textarea>
+        </label>
+        <div class="contact-actions">
+          <button type="button" id="contact-send" class="cta-btn">📨 メールクライアントで開く</button>
+          <button type="button" id="contact-copy" class="cta-secondary">📋 アドレスをコピー</button>
+        </div>
+        <div class="status" id="contact-status"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- プライバシーポリシーモーダル -->
+  <div id="privacy-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close="privacy"></div>
+    <div class="modal-body modal-doc">
+      <div class="modal-header">
+        <h2>🔒 プライバシーポリシー</h2>
+        <button class="icon-btn" data-close="privacy" title="閉じる">✕</button>
+      </div>
+
+      <p class="effective">最終更新: 2026年5月20日</p>
+
+      <h3>1. はじめに</h3>
+      <p>
+        Sales Follower (以下「本アプリ」) は、Google API を介して利用者の Google カレンダー /
+        Gmail / Tasks を操作するブラウザ上のツールです。本アプリの運営者は、利用者の入力した
+        情報を一切収集しません。
+      </p>
+
+      <h3>2. 収集する情報</h3>
+      <p>
+        本アプリは利用者の情報を <b>当方のサーバへ送信・保存しません</b>。
+        以下はすべて利用者のブラウザ内 (localStorage) に保存されます:
+      </p>
+      <ul>
+        <li>サービス雛形 (件名/本文)</li>
+        <li>メール署名</li>
+        <li>使用中のサービス ID</li>
+        <li>(任意) 上書きした Google Client ID / API キー</li>
+        <li>Google API の同期トークン・直近のカレンダーイベント (キャッシュ)</li>
+      </ul>
+      <p>これらはブラウザを変える/履歴を消去すると失われ、復元できません。</p>
+
+      <h3>3. Google ユーザーデータの扱い</h3>
+      <p>本アプリは利用者の許諾に基づき、以下のスコープで Google API を呼び出します:</p>
+      <ul>
+        <li><code>https://www.googleapis.com/auth/calendar.events</code> — 予定の作成・取得</li>
+        <li><code>https://www.googleapis.com/auth/gmail.compose</code> — 下書きの作成 (送信はしない)</li>
+        <li><code>https://www.googleapis.com/auth/tasks</code> — タスクの作成・完了マーク</li>
+      </ul>
+      <p>
+        取得した情報は <b>その場の表示・ローカルキャッシュのみ</b>に使用し、第三者への提供や
+        広告利用、機械学習目的の解析は <b>一切行いません</b>。
+      </p>
+      <p>
+        Google API から取得したユーザーデータの権限は、利用者が
+        <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">
+          Google アカウントの「サードパーティのアクセス」設定</a>
+        からいつでも取り消せます。
+      </p>
+
+      <h3>4. Cookie / トラッキング</h3>
+      <p>
+        本アプリは独自の Cookie や追跡 ID を使用しません。
+        ただし Google の認証ライブラリ (gapi, GIS) は OAuth フロー上 Google ドメインの Cookie を使用します。
+      </p>
+
+      <h3>5. 第三者サービス</h3>
+      <ul>
+        <li><b>Google LLC</b> (Calendar / Gmail / Tasks / Identity Services) — OAuth とデータ操作のため</li>
+      </ul>
+
+      <h3>6. データの削除</h3>
+      <p>
+        ブラウザのストレージを削除するか、本アプリ「⚙ 各種設定」内のリセット機能で
+        保存内容を消去できます。Google 側に作成したデータ (予定/下書き/タスク) は
+        Google 側で個別に削除してください。
+      </p>
+
+      <h3>7. 連絡先</h3>
+      <p>本ポリシーに関する問い合わせ: <code>koki.ikemoto@neo-career.co.jp</code></p>
+
+      <h3>8. 変更</h3>
+      <p>
+        本ポリシーは予告なく更新されることがあります。重要な変更がある場合は本アプリ上で告知します。
+      </p>
+    </div>
+  </div>
+
+  <!-- 利用規約モーダル -->
+  <div id="terms-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close="terms"></div>
+    <div class="modal-body modal-doc">
+      <div class="modal-header">
+        <h2>📄 利用規約</h2>
+        <button class="icon-btn" data-close="terms" title="閉じる">✕</button>
+      </div>
+
+      <p class="effective">最終更新: 2026年5月20日</p>
+
+      <h3>1. 適用</h3>
+      <p>本規約は、Sales Follower (以下「本アプリ」) の利用に関し、運営者と利用者の間で適用されます。本アプリを利用した時点で、本規約に同意したものとみなします。</p>
+
+      <h3>2. 利用目的</h3>
+      <p>本アプリは、利用者個人または所属組織における営業フォロー業務の補助ツールとして提供されます。商用転売、再配布、スパム送信の起点としての利用は禁止します。</p>
+
+      <h3>3. 禁止事項</h3>
+      <ul>
+        <li>本アプリを通じて第三者の Google アカウントに無断アクセスする行為</li>
+        <li>本アプリを利用してスパム/迷惑メールの下書きを大量生成する行為</li>
+        <li>本アプリの脆弱性を悪用する行為、リバースエンジニアリングして他者に害を与える行為</li>
+        <li>Google サービス利用規約に反する用途</li>
+      </ul>
+
+      <h3>4. 免責</h3>
+      <p>
+        本アプリは現状有姿で提供され、利用者の業務成果や Google API 仕様変更による動作不具合等について、
+        運営者は一切の責任を負いません。利用者は自己責任において本アプリを使用するものとします。
+      </p>
+
+      <h3>5. データの帰属</h3>
+      <p>
+        利用者が本アプリを通じて作成したデータ (カレンダー予定 / 下書き / タスク等) は、すべて利用者の Google アカウントに帰属します。
+        運営者はこれらのデータを取得・保管しません。
+      </p>
+
+      <h3>6. 改定</h3>
+      <p>本規約は予告なく改定される場合があります。改定後の規約は本アプリ上での掲示をもって発効します。</p>
+
+      <h3>7. 準拠法</h3>
+      <p>本規約は日本法に準拠し、本アプリに関する紛争は東京地方裁判所を専属的合意管轄裁判所とします。</p>
+    </div>
+  </div>
+</body>
+</html>
