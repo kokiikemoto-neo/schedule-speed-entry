@@ -37,6 +37,9 @@ export function newDefaultService(name = "デフォルト") {
     name,
     mailSubject: DEFAULT_SUBJECT,
     mailBody: DEFAULT_BODY,
+    enableDraft: true,
+    enableTask: true,
+    enableMeet: false,
   };
 }
 
@@ -48,10 +51,12 @@ export function addService(service) {
     name: (service.name || "").trim() || "(無題)",
     mailSubject: service.mailSubject || DEFAULT_SUBJECT,
     mailBody: service.mailBody || DEFAULT_BODY,
+    enableDraft: service.enableDraft !== false,  // default true
+    enableTask: service.enableTask !== false,    // default true
+    enableMeet: service.enableMeet === true,     // default false
   };
   list.push(s);
   saveServices(list);
-  // 最初に追加されたサービスは自動的にアクティブに
   if (list.length === 1) setActiveServiceId(id);
   return s;
 }
@@ -60,11 +65,15 @@ export function updateService(id, updates) {
   const list = getServices();
   const i = list.findIndex((s) => s.id === id);
   if (i < 0) return null;
+  const prev = list[i];
   list[i] = {
-    ...list[i],
-    name: (updates.name ?? list[i].name).trim() || "(無題)",
-    mailSubject: updates.mailSubject ?? list[i].mailSubject,
-    mailBody: updates.mailBody ?? list[i].mailBody,
+    ...prev,
+    name: (updates.name ?? prev.name).trim() || "(無題)",
+    mailSubject: updates.mailSubject ?? prev.mailSubject,
+    mailBody: updates.mailBody ?? prev.mailBody,
+    enableDraft: typeof updates.enableDraft === "boolean" ? updates.enableDraft : (prev.enableDraft ?? true),
+    enableTask:  typeof updates.enableTask  === "boolean" ? updates.enableTask  : (prev.enableTask  ?? true),
+    enableMeet:  typeof updates.enableMeet  === "boolean" ? updates.enableMeet  : (prev.enableMeet  ?? false),
   };
   saveServices(list);
   return list[i];
@@ -103,7 +112,15 @@ export function renderTemplate(tpl, vars) {
     .replaceAll("{電話番号}", vars.phone || "")
     .replaceAll("{日付}", vars.date || "")
     .replaceAll("{時刻}", vars.time || "")
-    .replaceAll("{サービス名}", vars.service || "");
+    .replaceAll("{サービス名}", vars.service || "")
+    .replaceAll("{MeetURL}", vars.meet || "")
+    .replaceAll("{ミーティングURL}", vars.meet || "");
+}
+
+// 雛形が MeetURL の変数を含むかどうか
+export function templateHasMeetVar(tpl) {
+  if (!tpl) return false;
+  return tpl.includes("{MeetURL}") || tpl.includes("{ミーティングURL}");
 }
 
 // フォールバック用デフォルト雛形(サービスが1件も無いとき)

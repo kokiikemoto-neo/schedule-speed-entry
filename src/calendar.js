@@ -131,16 +131,24 @@ export function getNextEvent(events) {
   return events.find((e) => endTime(e) > now) || null;
 }
 
-export async function insertEvent({ summary, startDate, durationMinutes }) {
+export async function insertEvent({ summary, startDate, durationMinutes, withMeet = false }) {
   const end = new Date(startDate.getTime() + durationMinutes * 60_000);
-  const resp = await gapi.client.calendar.events.insert({
-    calendarId: CALENDAR_ID,
-    resource: {
-      summary,
-      start: { dateTime: startDate.toISOString(), timeZone: TIMEZONE },
-      end: { dateTime: end.toISOString(), timeZone: TIMEZONE },
-    },
-  });
+  const resource = {
+    summary,
+    start: { dateTime: startDate.toISOString(), timeZone: TIMEZONE },
+    end: { dateTime: end.toISOString(), timeZone: TIMEZONE },
+  };
+  if (withMeet) {
+    resource.conferenceData = {
+      createRequest: {
+        requestId: `meet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      },
+    };
+  }
+  const params = { calendarId: CALENDAR_ID, resource };
+  if (withMeet) params.conferenceDataVersion = 1;
+  const resp = await gapi.client.calendar.events.insert(params);
   return resp.result;
 }
 

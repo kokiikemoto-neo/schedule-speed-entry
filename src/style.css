@@ -653,7 +653,54 @@ body.modal-open { overflow: hidden; }
   margin-bottom: 0.3rem;
   background: #fff;
 }
+.service-name-wrap { display: flex; flex-direction: column; gap: 0.2rem; }
 .service-name { font-weight: 600; font-size: 0.9rem; color: #1f2330; }
+.service-badges { display: flex; gap: 0.25rem; }
+.svc-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f0f2f5;
+  border: 1px solid #d0d4dd;
+}
+.svc-badge-meet { background: #ffe8d6; border-color: #f3c39a; }
+.svc-badge-task { background: #fff4d9; border-color: #f0d68c; }
+.svc-badge-draft { background: #e0e8ff; border-color: #c0caec; }
+
+/* サービスエディタのフラグ群 */
+.svc-flags {
+  border: 1px solid #d0d4dd;
+  background: #fafbfd;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.5rem;
+}
+.svc-flags legend {
+  font-size: 0.78rem;
+  color: #4a6cf7;
+  font-weight: 600;
+  padding: 0 0.3rem;
+}
+.check-label {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.88rem;
+  color: #1f2330;
+  cursor: pointer;
+}
+.check-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4a6cf7;
+}
 .service-action {
   padding: 0.3rem 0.7rem;
   font-size: 0.78rem;

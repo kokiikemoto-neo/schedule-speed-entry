@@ -153,7 +153,7 @@ function buildEventItem(item, inProgress, now) {
 
   const time = document.createElement("span");
   time.className = "event-time";
-  time.textContent = item.isAllDay ? "終日" : `${fmtTime(item.start)}–${fmtTime(item.end)}`;
+  time.textContent = item.isAllDay ? "終日" : `${fmtTime(item.start)}~${fmtTime(item.end)}`;
 
   const title = document.createElement("span");
   title.className = "event-title";

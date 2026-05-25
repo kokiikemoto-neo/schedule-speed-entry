@@ -140,15 +140,24 @@ function initServicesSection() {
     const nameInput = document.getElementById("svc-name");
     const subjectInput = document.getElementById("svc-subject");
     const bodyInput = document.getElementById("svc-body");
+    const draftCb = document.getElementById("svc-enable-draft");
+    const taskCb = document.getElementById("svc-enable-task");
+    const meetCb = document.getElementById("svc-enable-meet");
     const status = document.getElementById("svc-status");
 
     const name = nameInput.value.trim();
     if (!name) return setStatus(status, "サービス名を入力してください", "error");
+    if (!draftCb.checked && !taskCb.checked && !meetCb.checked) {
+      return setStatus(status, "アクションを少なくとも 1 つ選択してください", "error");
+    }
 
     const payload = {
       name,
       mailSubject: subjectInput.value,
       mailBody: bodyInput.value,
+      enableDraft: draftCb.checked,
+      enableTask: taskCb.checked,
+      enableMeet: meetCb.checked,
     };
     if (editingId) {
       updateService(editingId, payload);
@@ -184,9 +193,20 @@ function renderServicesList() {
     const row = document.createElement("div");
     row.className = "service-row";
 
+    const nameWrap = document.createElement("div");
+    nameWrap.className = "service-name-wrap";
+
     const name = document.createElement("span");
     name.className = "service-name";
     name.textContent = svc.name;
+    nameWrap.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "service-badges";
+    if (svc.enableDraft !== false) badges.appendChild(makeBadge("📧", "draft"));
+    if (svc.enableTask !== false) badges.appendChild(makeBadge("📋", "task"));
+    if (svc.enableMeet === true) badges.appendChild(makeBadge("🎥", "meet"));
+    nameWrap.appendChild(badges);
 
     const editBtn = document.createElement("button");
     editBtn.type = "button";
@@ -205,11 +225,18 @@ function renderServicesList() {
       notifyServicesChanged();
     });
 
-    row.appendChild(name);
+    row.appendChild(nameWrap);
     row.appendChild(editBtn);
     row.appendChild(delBtn);
     listEl.appendChild(row);
   }
+}
+
+function makeBadge(icon, kind) {
+  const b = document.createElement("span");
+  b.className = "svc-badge svc-badge-" + kind;
+  b.textContent = icon;
+  return b;
 }
 
 function startEdit(id) {
@@ -219,6 +246,9 @@ function startEdit(id) {
   const nameInput = document.getElementById("svc-name");
   const subjectInput = document.getElementById("svc-subject");
   const bodyInput = document.getElementById("svc-body");
+  const draftCb = document.getElementById("svc-enable-draft");
+  const taskCb = document.getElementById("svc-enable-task");
+  const meetCb = document.getElementById("svc-enable-meet");
   const status = document.getElementById("svc-status");
   if (!editor) return;
 
@@ -228,12 +258,18 @@ function startEdit(id) {
     nameInput.value = svc?.name || "";
     subjectInput.value = svc?.mailSubject || "";
     bodyInput.value = svc?.mailBody || "";
+    if (draftCb) draftCb.checked = svc?.enableDraft !== false;
+    if (taskCb) taskCb.checked = svc?.enableTask !== false;
+    if (meetCb) meetCb.checked = svc?.enableMeet === true;
   } else {
     const def = newDefaultService("");
     title.textContent = "新規サービス";
     nameInput.value = "";
     subjectInput.value = def.mailSubject;
     bodyInput.value = def.mailBody;
+    if (draftCb) draftCb.checked = true;
+    if (taskCb) taskCb.checked = true;
+    if (meetCb) meetCb.checked = false;
   }
   setStatus(status, "");
   editor.hidden = false;

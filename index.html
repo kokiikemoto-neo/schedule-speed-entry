@@ -103,9 +103,11 @@
         </label>
         <label id="duration-row">長さ
           <select name="duration">
-            <option value="5">5分</option>
-            <option value="10" selected>10分</option>
-            <option value="15">15分</option>
+            <option value="10">10分</option>
+            <option value="20">20分</option>
+            <option value="30" selected>30分</option>
+            <option value="45">45分</option>
+            <option value="60">60分</option>
           </select>
         </label>
         <div class="preview" id="title-preview">タイトル: 【再架電】　　</div>
@@ -170,6 +172,23 @@
           <label>サービス名 (商品名)
             <input type="text" id="svc-name" placeholder="例: 商品A" />
           </label>
+
+          <fieldset class="svc-flags">
+            <legend>📦 メール送付時に実行するアクション</legend>
+            <label class="check-label">
+              <input type="checkbox" id="svc-enable-draft" />
+              <span>📧 Gmail に下書きを作成</span>
+            </label>
+            <label class="check-label">
+              <input type="checkbox" id="svc-enable-task" />
+              <span>📋 Google Tasks に登録 (チェックボックス付き)</span>
+            </label>
+            <label class="check-label">
+              <input type="checkbox" id="svc-enable-meet" />
+              <span>🎥 Google Meet 付き予定をカレンダーに登録 (商談など)</span>
+            </label>
+          </fieldset>
+
           <label>件名雛形
             <input type="text" id="svc-subject" />
           </label>
@@ -178,7 +197,8 @@
           </label>
           <p class="settings-intro">
             使える変数: <code>{会社名}</code> <code>{担当者名}</code> <code>{電話番号}</code>
-            <code>{日付}</code> <code>{時刻}</code> <code>{サービス名}</code>
+            <code>{日付}</code> <code>{時刻}</code> <code>{サービス名}</code> <code>{MeetURL}</code><br>
+            <small>※ <code>{MeetURL}</code> は本文中で位置指定したい場合のみ記入。未指定でも Meet 予定がある場合は本文末尾に自動転記されます。</small>
           </p>
           <div class="settings-actions">
             <button id="svc-save" type="button">保存</button>
@@ -235,7 +255,7 @@
         <li><a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud Console</a> でプロジェクト作成</li>
         <li>「APIとサービス」→「ライブラリ」で以下の API を <b>すべて有効化</b>:
           <ul>
-            <li>Google Calendar API</li>
+            <li>Google Calendar API (Meet リンク自動発行はこの API に含まれます — 別個の有効化は不要)</li>
             <li>Gmail API</li>
             <li>Google Tasks API</li>
           </ul>
@@ -267,16 +287,28 @@
       <table class="perm-table">
         <thead><tr><th>スコープ</th><th>用途</th><th>影響範囲</th></tr></thead>
         <tbody>
-          <tr><td><code>calendar.events</code></td><td>再架電予定の作成・読み込み</td><td>カレンダー予定のみ。設定は変更不可</td></tr>
-          <tr><td><code>gmail.compose</code></td><td>メール下書きの作成</td><td>下書きのみ作成。送信は行いません</td></tr>
+          <tr><td><code>calendar.events</code></td><td>再架電予定・Meet 付き商談予定の作成・読み込み</td><td>カレンダー予定のみ。設定は変更不可</td></tr>
+          <tr><td><code>gmail.compose</code></td><td>メール下書きの作成 (Meet URL の自動転記含む)</td><td>下書きのみ作成。送信は行いません</td></tr>
           <tr><td><code>tasks</code></td><td>資料送付タスクの作成・完了マーク</td><td>Google Tasks のみ</td></tr>
         </tbody>
       </table>
 
-      <h3>5. うまくいかないとき</h3>
+      <h3>5. サービス管理 (アクション選択)</h3>
+      <p>
+        「⚙ 各種設定」→「📋 サービス管理」で各サービスごとに以下 3 つのアクションを ON/OFF できます。
+      </p>
+      <ul>
+        <li>📧 <b>Gmail 下書き作成</b> — 雛形を変数置換して下書きに保存</li>
+        <li>📋 <b>Google Tasks 登録</b> — 「【資料送付】会社名」でチェックボックス付きタスクを追加</li>
+        <li>🎥 <b>Google Meet 付き予定</b> — 日時指定 + Meet リンク自動発行された予定をカレンダーに登録。
+          Meet URL は雛形の <code>{MeetURL}</code> または下書き本文末尾に自動転記</li>
+      </ul>
+
+      <h3>6. うまくいかないとき</h3>
       <ul>
         <li><b>「access_blocked / app not verified」</b>: OAuth 同意画面の「テストユーザ」に自分のメールを追加</li>
-        <li><b>「Calendar API not enabled」</b>: Cloud Console で該当 API を有効化</li>
+        <li><b>「Calendar / Gmail / Tasks API not enabled」</b>: Cloud Console で該当 API を有効化</li>
+        <li><b>Meet リンクが付かない</b>: Calendar API のみで動作。同 API が無効でないか確認</li>
         <li><b>401 が出続ける</b>: 一度ログアウト → 再ログイン</li>
         <li><b>下書きができない</b>: 同意画面で「下書き作成」のチェックが ON か確認</li>
       </ul>
